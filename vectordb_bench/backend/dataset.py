@@ -5,6 +5,7 @@ Usage:
 """
 
 import logging
+import os
 import pathlib
 from enum import Enum
 from typing import Any, NamedTuple
@@ -23,6 +24,10 @@ from .data_source import DatasetReader, DatasetSource
 from .filter import Filter, FilterOp, non_filter
 
 log = logging.getLogger(__name__)
+
+
+def stream_train_download_enabled() -> bool:
+    return os.getenv("VDBBENCH_STREAM_TRAIN_DOWNLOAD") == "1"
 
 
 class SizeLabel(NamedTuple):
@@ -365,6 +370,10 @@ class DatasetManager(BaseModel):
             if self.data.with_scalar_labels and self.data.scalar_labels_file_separated:
                 download_files.append(self.data.scalar_labels_file)
             download_files = [file for file in download_files if file is not None]
+            if stream_train_download_enabled():
+                train_file_names = set(self.train_files)
+                download_files = [file for file in download_files if file not in train_file_names]
+                log.info("VDBBENCH_STREAM_TRAIN_DOWNLOAD=1, defer train parquet download to iterator")
             source.reader().read(
                 dataset=self.data.dir_name.lower(),
                 files=download_files,
@@ -422,11 +431,29 @@ class DataSetIterator:
     def _get_iter(self, file_name: str):
         p = pathlib.Path(self._ds.data_dir, file_name)
         log.info(f"Get iterator for {p.name}")
+        if stream_train_download_enabled() and not p.exists() and file_name in self._ds.train_files:
+            source = DatasetSource[config.DATASET_SOURCE]
+            log.info(f"Streaming download train parquet: {file_name}")
+            source.reader().read(
+                dataset=self._ds.data.dir_name.lower(),
+                files=[file_name],
+                local_ds_root=self._ds.data_dir,
+            )
         if not p.exists():
             msg = f"No such file: {p}"
             log.warning(msg)
             raise IndexError(msg)
         return ParquetFile(p, memory_map=True, pre_buffer=True).iter_batches(config.NUM_PER_BATCH)
+
+    def _cleanup_train_file(self, file_name: str):
+        if not stream_train_download_enabled() or file_name not in self._ds.train_files:
+            return
+        p = pathlib.Path(self._ds.data_dir, file_name)
+        try:
+            p.unlink(missing_ok=True)
+            log.info(f"Removed streamed train parquet: {p}")
+        except OSError as e:
+            log.warning(f"Failed to remove streamed train parquet {p}: {e}")
 
     def __next__(self) -> pd.DataFrame:
         """return the data in the next file of the training list"""
@@ -438,10 +465,13 @@ class DataSetIterator:
             try:
                 return next(self._cur).to_pandas()
             except StopIteration:
-                if self._idx == len(self._ds.train_files) - 1:
+                old_file_name = self._ds.train_files[self._idx]
+                self._cur = None
+                self._cleanup_train_file(old_file_name)
+                self._idx += 1
+                if self._idx >= len(self._ds.train_files):
                     raise StopIteration from None
 
-                self._idx += 1
                 file_name = self._ds.train_files[self._idx]
                 self._cur = self._get_iter(file_name)
                 return next(self._cur).to_pandas()

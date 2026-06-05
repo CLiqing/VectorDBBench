@@ -102,7 +102,7 @@ class MilvusHNSWTypedDict(CommonTypedDict, MilvusTypedDict, HNSWFlavor3): ...
 @cli.command()
 @click_parameter_decorators_from_typed_dict(MilvusHNSWTypedDict)
 def MilvusHNSW(**parameters: Unpack[MilvusHNSWTypedDict]):
-    from .config import HNSWConfig, MilvusConfig
+    from .config import HNSWConfig, MetricType, MilvusConfig
 
     run(
         db=DBTYPE,
@@ -115,6 +115,7 @@ def MilvusHNSW(**parameters: Unpack[MilvusHNSWTypedDict]):
             replica_number=int(parameters["replica_number"]),
         ),
         db_case_config=HNSWConfig(
+            metric_type=MetricType.COSINE,
             M=parameters["m"],
             efConstruction=parameters["ef_construction"],
             ef=parameters["ef_search"],
