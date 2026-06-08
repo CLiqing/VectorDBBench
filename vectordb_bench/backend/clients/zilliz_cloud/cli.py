@@ -58,6 +58,44 @@ class ZillizTypedDict(CommonTypedDict):
             show_default=True,
         ),
     ]
+    cardinal_expr_downpush: Annotated[
+        bool,
+        click.option(
+            "--cardinal-expr-downpush",
+            is_flag=True,
+            help="Enable demo Cardinal expression downpush search params.",
+        ),
+    ]
+    cardinal_expr_threshold: Annotated[
+        int | None,
+        click.option(
+            "--cardinal-expr-threshold",
+            type=int,
+            required=False,
+            default=None,
+            help="Optional threshold for id >= threshold downpush validation.",
+        ),
+    ]
+    cardinal_expr_filtered_out_count: Annotated[
+        int | None,
+        click.option(
+            "--cardinal-expr-filtered-out-count",
+            type=int,
+            required=False,
+            default=None,
+            help="Optional filtered-out count for Cardinal downpush strategy.",
+        ),
+    ]
+    cardinal_expr_filter_ratio: Annotated[
+        float | None,
+        click.option(
+            "--cardinal-expr-filter-ratio",
+            type=float,
+            required=False,
+            default=None,
+            help="Optional filtered-out ratio for Cardinal downpush strategy.",
+        ),
+    ]
 
 
 @cli.command()
@@ -78,6 +116,12 @@ def ZillizAutoIndex(**parameters: Unpack[ZillizTypedDict]):
         db_case_config=AutoIndexConfig(
             level=int(parameters["level"]) if parameters["level"] else 1,
             num_shards=parameters["num_shards"],
+            cardinal_expr_downpush=parameters["cardinal_expr_downpush"],
+            cardinal_expr_threshold=parameters["cardinal_expr_threshold"],
+            cardinal_expr_filtered_out_count=parameters[
+                "cardinal_expr_filtered_out_count"
+            ],
+            cardinal_expr_filter_ratio=parameters["cardinal_expr_filter_ratio"],
         ),
         **parameters,
     )
