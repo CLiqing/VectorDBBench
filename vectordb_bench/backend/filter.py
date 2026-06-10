@@ -5,6 +5,7 @@ from ..base import BaseModel
 
 class FilterOp(StrEnum):
     NumGE = "NumGE"  # test ">="
+    NumModLT = "NumModLT"  # test "% <"
     StrEqual = "Label"  # test "=="
     NonFilter = "NonFilter"
 
@@ -66,6 +67,17 @@ class NewIntFilter(Filter):
     @property
     def groundtruth_file(self) -> str:
         return f"neighbors_{self.int_rate}.parquet"
+
+
+class ModIntFilter(Filter):
+    type: FilterOp = FilterOp.NumModLT
+    int_field: str = "id"
+    modulus: int
+    threshold: int
+
+    @property
+    def groundtruth_file(self) -> str:
+        return "neighbors.parquet"
 
 
 class LabelFilter(Filter):

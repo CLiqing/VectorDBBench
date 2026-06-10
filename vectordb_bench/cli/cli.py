@@ -186,6 +186,9 @@ def get_custom_case_config(parameters: dict) -> dict:
         custom_case_config = {
             "dataset_with_size_type": parameters["dataset_with_size_type"],
             "filter_rate": parameters["filter_rate"],
+            "int_filter_expr_type": parameters["int_filter_expr_type"],
+            "int_filter_mod_p": parameters["int_filter_mod_p"],
+            "int_filter_mod_t": parameters["int_filter_mod_t"],
         }
     elif parameters["case_type"] == "LabelFilterPerformanceCase":
         custom_case_config = {
@@ -452,6 +455,34 @@ class CommonTypedDict(TypedDict):
             "--filter-rate",
             help="Filter rate for NewIntFilterPerformanceCase",
             default=0.01,
+            show_default=True,
+        ),
+    ]
+    int_filter_expr_type: Annotated[
+        str,
+        click.option(
+            "--int-filter-expr-type",
+            type=click.Choice(["range", "mod-lt"], case_sensitive=False),
+            help="Int filter expression shape for NewIntFilterPerformanceCase",
+            default="range",
+            show_default=True,
+        ),
+    ]
+    int_filter_mod_p: Annotated[
+        int,
+        click.option(
+            "--int-filter-mod-p",
+            help="Modulo divisor for mod-lt int filter",
+            default=2,
+            show_default=True,
+        ),
+    ]
+    int_filter_mod_t: Annotated[
+        int,
+        click.option(
+            "--int-filter-mod-t",
+            help="Modulo threshold for mod-lt int filter",
+            default=1,
             show_default=True,
         ),
     ]

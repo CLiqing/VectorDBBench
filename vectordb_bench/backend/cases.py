@@ -4,7 +4,16 @@ from enum import Enum, auto
 
 from vectordb_bench import config
 from vectordb_bench.backend.clients.api import MetricType
-from vectordb_bench.backend.filter import Filter, FilterOp, IntFilter, LabelFilter, NewIntFilter, NonFilter, non_filter
+from vectordb_bench.backend.filter import (
+    Filter,
+    FilterOp,
+    IntFilter,
+    LabelFilter,
+    ModIntFilter,
+    NewIntFilter,
+    NonFilter,
+    non_filter,
+)
 from vectordb_bench.base import BaseModel
 from vectordb_bench.frontend.components.custom.getCustomConfig import CustomDatasetConfig
 
@@ -558,18 +567,41 @@ class NewIntFilterPerformanceCase(PerformanceCase):
     case_id: CaseType = CaseType.NewIntFilterPerformanceCase
     dataset_with_size_type: DatasetWithSizeType
     filter_rate: float
+    int_filter_expr_type: str = "range"
+    int_filter_mod_p: int = 2
+    int_filter_mod_t: int = 1
 
     def __init__(
         self,
         dataset_with_size_type: DatasetWithSizeType | str,
         filter_rate: float,
         int_value: float | None = 0,
+        int_filter_expr_type: str = "range",
+        int_filter_mod_p: int = 2,
+        int_filter_mod_t: int = 1,
         **kwargs,
     ):
         if not isinstance(dataset_with_size_type, DatasetWithSizeType):
             dataset_with_size_type = DatasetWithSizeType(dataset_with_size_type)
-        name = f"Int-Filter-{filter_rate*100:.1f}% - {dataset_with_size_type.value}"
-        description = f"Int-Filter-{filter_rate*100:.1f}% Performance Test ({dataset_with_size_type.value})"
+        if int_filter_expr_type not in {"range", "mod-lt"}:
+            msg = f"Unsupported int_filter_expr_type: {int_filter_expr_type}"
+            raise ValueError(msg)
+        if int_filter_expr_type == "mod-lt" and not (
+            int_filter_mod_p > 0 and 0 <= int_filter_mod_t <= int_filter_mod_p
+        ):
+            msg = (
+                "mod-lt int filter requires int_filter_mod_p > 0 and "
+                "0 <= int_filter_mod_t <= int_filter_mod_p"
+            )
+            raise ValueError(msg)
+        name = (
+            f"Int-Filter-{filter_rate*100:.1f}% {int_filter_expr_type} - "
+            f"{dataset_with_size_type.value}"
+        )
+        description = (
+            f"Int-Filter-{filter_rate*100:.1f}% {int_filter_expr_type} "
+            f"Performance Test ({dataset_with_size_type.value})"
+        )
         dataset = dataset_with_size_type.get_manager()
         load_timeout = dataset_with_size_type.get_load_timeout()
         optimize_timeout = dataset_with_size_type.get_optimize_timeout()
@@ -583,6 +615,9 @@ class NewIntFilterPerformanceCase(PerformanceCase):
             optimize_timeout=optimize_timeout,
             filter_rate=filter_rate,
             int_value=int_value,
+            int_filter_expr_type=int_filter_expr_type,
+            int_filter_mod_p=int_filter_mod_p,
+            int_filter_mod_t=int_filter_mod_t,
             dataset_with_size_type=dataset_with_size_type,
             **kwargs,
         )
@@ -590,6 +625,13 @@ class NewIntFilterPerformanceCase(PerformanceCase):
     @property
     def filters(self) -> Filter:
         int_field = self.dataset.data.train_id_field
+        if self.int_filter_expr_type == "mod-lt":
+            return ModIntFilter(
+                filter_rate=self.filter_rate,
+                int_field=int_field,
+                modulus=self.int_filter_mod_p,
+                threshold=self.int_filter_mod_t,
+            )
         int_value = int(self.dataset.data.size * self.filter_rate)
         return NewIntFilter(filter_rate=self.filter_rate, int_field=int_field, int_value=int_value)
 

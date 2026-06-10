@@ -27,6 +27,8 @@ class AutoIndexConfig(MilvusIndexConfig, DBCaseConfig):
     num_shards: int = 1
     cardinal_expr_downpush: bool = False
     cardinal_expr_threshold: int | None = None
+    cardinal_expr_mod_p: int | None = None
+    cardinal_expr_mod_t: int | None = None
     cardinal_expr_filtered_out_count: int | None = None
     cardinal_expr_filter_ratio: float | None = None
 
@@ -45,6 +47,10 @@ class AutoIndexConfig(MilvusIndexConfig, DBCaseConfig):
             params["cardinal_expr_downpush"] = True
             if self.cardinal_expr_threshold is not None:
                 params["cardinal_expr_threshold"] = self.cardinal_expr_threshold
+            if self.cardinal_expr_mod_p is not None:
+                params["cardinal_expr_mod_p"] = self.cardinal_expr_mod_p
+            if self.cardinal_expr_mod_t is not None:
+                params["cardinal_expr_mod_t"] = self.cardinal_expr_mod_t
             if self.cardinal_expr_filtered_out_count is not None:
                 params["cardinal_expr_filtered_out_count"] = self.cardinal_expr_filtered_out_count
             if self.cardinal_expr_filter_ratio is not None:

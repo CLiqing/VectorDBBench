@@ -21,6 +21,7 @@ class Milvus(VectorDB):
     supported_filter_types: list[FilterOp] = [
         FilterOp.NonFilter,
         FilterOp.NumGE,
+        FilterOp.NumModLT,
         FilterOp.StrEqual,
     ]
 
@@ -235,6 +236,11 @@ class Milvus(VectorDB):
             self.expr = ""
         elif filters.type == FilterOp.NumGE:
             self.expr = f"{self._scalar_id_field} >= {filters.int_value}"
+        elif filters.type == FilterOp.NumModLT:
+            self.expr = (
+                f"{self._scalar_id_field} % {filters.modulus} < "
+                f"{filters.threshold}"
+            )
         elif filters.type == FilterOp.StrEqual:
             self.expr = f"{self._scalar_label_field} == '{filters.label_value}'"
         else:
